@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>{{ title }}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <style>
+    :root{--bg:#020617;--panel:#0f172a;--panel2:#111827;--line:#334155;--text:#e5e7eb;--muted:#94a3b8;--ok:#22c55e;--blue:#38bdf8;--warn:#f59e0b;--bad:#ef4444;}
+    *{box-sizing:border-box} html,body{margin:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .app{display:grid;grid-template-columns:420px 1fr;height:100vh}
+    .side{background:linear-gradient(180deg,#0f172a,#020617);border-right:1px solid var(--line);padding:16px;overflow:auto}
+    .map-wrap{position:relative;height:100vh}.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    #map{height:100vh;width:100%}.card{background:rgba(15,23,42,.92);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}
+    h1{margin:0;font-size:22px} h2{margin:0 0 10px;font-size:16px} .muted,.tiny{color:var(--muted)} .muted{font-size:13px;line-height:1.45}.tiny{font-size:12px}
+    input,select,button{font:inherit} input,select{width:100%;background:#020617;color:#fff;border:1px solid #475569;border-radius:10px;padding:10px}
+    label{display:block;margin:8px 0 6px;font-size:12px;color:#cbd5e1}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer;background:#1f2937;color:#fff}.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .primary{background:var(--ok);color:#052e16;font-weight:700}.secondary{background:#0369a1}.warn{background:var(--warn);color:#1f1300;font-weight:700}.danger{background:var(--bad)}
+    .status{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);font-size:13px;line-height:1.45}
+    .chips{display:flex;flex-wrap:wrap;gap:6px}.chip{padding:5px 9px;border-radius:999px;border:1px solid #475569;background:#020617;font-size:12px}
+    .list{display:grid;gap:10px}.item{background:#020617;border:1px solid #334155;border-radius:12px;padding:10px}.item-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .title{font-size:14px;font-weight:700}.sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px;word-break:break-word}.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.actions button{padding:8px 6px;font-size:12px}
+    .badge{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06)}
+    .dot{width:10px;height:10px;border-radius:50%;display:inline-block}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{padding:10px;border-radius:12px;border:1px solid #334155;background:#020617}.stat strong{display:block;font-size:18px;margin-top:4px}
+    .filter-grid{display:grid;gap:8px}.filter-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#020617;border:1px solid #334155;border-radius:10px;font-size:13px}
+    .route-order{min-height:90px;white-space:pre-line;padding:10px;border:1px solid rgba(34,197,94,.18);background:rgba(34,197,94,.08);border-radius:12px;font-size:13px;line-height:1.45}
+    .map-note{position:absolute;right:12px;top:12px;z-index:500;background:rgba(2,6,23,.88);border:1px solid #334155;border-radius:14px;padding:10px 12px;max-width:360px;font-size:12px;line-height:1.45;backdrop-filter:blur(8px)}
+    .marker{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;color:#fff;font-weight:700;font-size:12px;box-shadow:0 4px 14px rgba(0,0,0,.35);position:relative}
+    .marker.selected{box-shadow:0 0 0 4px rgba(56,189,248,.25),0 4px 14px rgba(0,0,0,.35)}
+    .marker.multi{border-radius:12px;padding:0 6px;min-width:36px}
+    .marker.overdue{animation:pulse 1.2s infinite;box-shadow:0 0 0 4px rgba(255,0,0,.2),0 0 12px rgba(255,0,0,.9),0 4px 14px rgba(0,0,0,.4)}
+    .marker.due-soon{box-shadow:0 0 0 3px rgba(251,191,36,.28),0 0 10px rgba(251,191,36,.65),0 4px 14px rgba(0,0,0,.35)}
+    .base-marker{width:34px;height:34px;transform:rotate(45deg);background:linear-gradient(135deg,#fde68a,#f59e0b);border:2px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#111827;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+    .base-marker span{transform:rotate(-45deg)}
+    .arrow{font-size:22px;font-weight:900;text-shadow:0 0 4px rgba(0,0,0,.5)}
+    .sortbar{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px}.linkbtn{display:inline-block;margin-top:8px;padding:8px 10px;border-radius:8px;background:#0369a1;color:#fff;text-decoration:none;font-size:12px;font-weight:700}
+    .popup-list{display:grid;gap:8px;margin-top:8px}.popup-card{border-top:1px solid rgba(255,255,255,.08);padding-top:8px}.hidden{display:none}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+    @media (max-width:1100px){html,body{overflow:auto}.app{grid-template-columns:1fr;height:auto}.side{height:auto;border-right:0;border-bottom:1px solid var(--line)}.map-wrap,#map{height:70vh}.sortbar{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr}.actions{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="topbar">
+      <div>
+        <h1>{{ title }}</h1>
+        <div class="muted">Versión {{ build }} · Usuario: {{ user_name }}</div>
+      </div>
+      {% if team_password_enabled %}
+      <form method="post" action="/logout"><button>Cerrar</button></form>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Agregar o editar parada</h2>
+      <input type="hidden" id="stopId">
+      <label>PO#</label><input id="po" placeholder="PO-1045">
+      <div class="row2">
+        <div><label>Localidad</label><input id="localidad" placeholder="Miami"></div>
+        <div><label>Due date</label><input id="dueDate" type="date"></div>
+      </div>
+      <label>Dirección</label><input id="direccion" placeholder="1611 NW 12th Ave, Miami, FL 33136">
+      <label>Link externo o Dropbox</label><input id="externalLink" placeholder="https://www.dropbox.com/...">
+      <div class="row3">
+        <div><label>Tipo</label><select id="type"></select></div>
+        <div><label>Tag</label><input id="tag" placeholder="Urgente"></div>
+        <div><label>Color</label><input id="color" type="color" value="#2563eb"></div>
+      </div>
+      <div class="row2"><label class="tiny"><input id="selected" type="checkbox"> Incluir en ruta</label><div></div></div>
+      <div class="btns">
+        <button class="secondary" id="btnLocateStop">Ubicar</button>
+        <button class="primary" id="btnSaveStop">Guardar</button>
+        <button id="btnClearStop">Limpiar</button>
+      </div>
+      <div class="status" id="stopStatus">Escribe la dirección y guarda. La app geocodifica automáticamente.</div>
+    </div>
+
+    <div class="card">
+      <h2>Agregar o editar base</h2>
+      <input type="hidden" id="baseId">
+      <label>Nombre</label><input id="baseName" placeholder="Oficina principal">
+      <label>Dirección</label><input id="baseDireccion" placeholder="500 NW 7th St, Miami, FL 33136">
+      <div class="btns">
+        <button class="secondary" id="btnLocateBase">Ubicar</button>
+        <button class="warn" id="btnSaveBase">Guardar base</button>
+        <button id="btnClearBase">Limpiar</button>
+      </div>
+      <div class="status" id="baseStatus">Crea bases y elige cuál usar como salida.</div>
+    </div>
+
+    <div class="card">
+      <h2>Filtros</h2>
+      <div class="filter-grid" id="filters"></div>
+      <div class="btns"><button id="btnSelectVisible">Seleccionar visibles</button><button id="btnUnselectVisible">Quitar visibles</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Ruta</h2>
+      <div class="stats">
+        <div class="stat"><div class="tiny">Paradas</div><strong id="statStops">0</strong></div>
+        <div class="stat"><div class="tiny">Seleccionadas</div><strong id="statSelected">0</strong></div>
+        <div class="stat"><div class="tiny">Vencidos</div><strong id="statOverdue">0</strong></div>
+        <div class="stat"><div class="tiny">Distancia</div><strong id="statDistance">0 km</strong></div>
+      </div>
+      <div class="btns"><button class="primary" id="btnCalcRoute">Calcular ruta</button><button id="btnClearRoute">Quitar ruta</button></div>
+      <div class="status" id="routeStatus">Marca las paradas que quieras incluir y calcula.</div>
+      <div class="route-order" id="routeOrder">Aún no se ha calculado ninguna ruta.</div>
+    </div>
+
+    <div class="card">
+      <h2>Bases</h2>
+      <div class="list" id="baseList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Paradas cargadas</h2>
+      <div class="sortbar">
+        <select id="sortBy">
+          <option value="updated_at">Última actualización</option>
+          <option value="po">PO#</option>
+          <option value="localidad">Localidad</option>
+          <option value="direccion">Dirección</option>
+          <option value="due_date">Due date</option>
+          <option value="tipo">Tipo</option>
+          <option value="tag">Tag</option>
+          <option value="selected">En ruta</option>
+        </select>
+        <select id="sortDir">
+          <option value="desc">Descendente</option>
+          <option value="asc">Ascendente</option>
+        </select>
+        <button id="btnApplySort">Aplicar</button>
+        <button id="btnRefresh">Recargar</button>
+      </div>
+      <div class="list" id="stopList" style="margin-top:10px"></div>
+    </div>
+  </aside>
+
+  <section class="map-wrap">
+    <div class="map-note">Versión web compartida. Si varias órdenes están en el mismo punto, verás un solo marcador con contador. Los puntos vencidos brillan más fuerte.</div>
+    <div id="map"></div>
+  </section>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const CATEGORY_META = {{ category_meta|tojson }};
+const SEGMENT_COLORS = {{ segment_colors|tojson }};
+
+const state = {
+  bases: [],
+  stops: [],
+  route: null,
+  filters: { servicio: true, proyecto: true, calidad: true },
+  sortBy: 'updated_at',
+  sortDir: 'desc',
+  markers: null,
+  routeLayer: null,
+  currentPreview: null,
+};
+
+const $ = (id) => document.getElementById(id);
+const els = {
+  stopId: $('stopId'), po: $('po'), localidad: $('localidad'), direccion: $('direccion'), externalLink: $('externalLink'),
+  type: $('type'), tag: $('tag'), color: $('color'), dueDate: $('dueDate'), selected: $('selected'),
+  btnLocateStop: $('btnLocateStop'), btnSaveStop: $('btnSaveStop'), btnClearStop: $('btnClearStop'), stopStatus: $('stopStatus'),
+  baseId: $('baseId'), baseName: $('baseName'), baseDireccion: $('baseDireccion'), btnLocateBase: $('btnLocateBase'), btnSaveBase: $('btnSaveBase'), btnClearBase: $('btnClearBase'), baseStatus: $('baseStatus'),
+  filters: $('filters'), stopList: $('stopList'), baseList: $('baseList'), routeStatus: $('routeStatus'), routeOrder: $('routeOrder'),
+  statStops: $('statStops'), statSelected: $('statSelected'), statOverdue: $('statOverdue'), statDistance: $('statDistance'),
+  sortBy: $('sortBy'), sortDir: $('sortDir'), btnApplySort: $('btnApplySort'), btnRefresh: $('btnRefresh'),
+  btnCalcRoute: $('btnCalcRoute'), btnClearRoute: $('btnClearRoute'), btnSelectVisible: $('btnSelectVisible'), btnUnselectVisible: $('btnUnselectVisible')
+};
+
+Object.entries(CATEGORY_META).forEach(([key, meta]) => {
+  const opt = document.createElement('option'); opt.value = key; opt.textContent = meta.label; els.type.appendChild(opt);
+});
+els.type.value = 'proyecto';
+els.color.value = CATEGORY_META.proyecto.color;
+
+const map = L.map('map').setView([25.7617, -80.1918], 5);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors', referrerPolicy: 'strict-origin' }).addTo(map);
+state.markers = L.layerGroup().addTo(map);
+state.routeLayer = L.layerGroup().addTo(map);
+
+function setStopStatus(t){ els.stopStatus.textContent = t; }
+function setBaseStatus(t){ els.baseStatus.textContent = t; }
+function setRouteStatus(t){ els.routeStatus.textContent = t; }
+function km(m){ return `${((m||0)/1000).toFixed(2)} km`; }
+function esc(s){ return String(s ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'); }
+function stopDueStatus(stop){
+  if(!stop.due_date) return {key:'none',label:'Sin due date',priority:0};
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due = new Date(stop.due_date+'T00:00:00');
+  const diff = Math.round((due - today)/86400000);
+  if(diff < 0) return {key:'overdue', label:`Vencido por ${Math.abs(diff)} día${Math.abs(diff)===1?'':'s'}`, priority:3};
+  if(diff === 0) return {key:'today', label:'Vence hoy', priority:2};
+  if(diff === 1) return {key:'tomorrow', label:'Vence mañana', priority:1};
+  if(diff <= 3) return {key:'soon', label:`Vence en ${diff} días`, priority:1};
+  return {key:'future', label:`Vence en ${diff} días`, priority:0};
+}
+function fetchJson(url, opts={}){
+  return fetch(url, { headers:{'Content-Type':'application/json'}, ...opts }).then(async r => {
+    const data = await r.json().catch(() => ({}));
+    if(!r.ok || data.ok === false) throw new Error(data.error || 'Error');
+    return data;
+  });
+}
+function clearPreview(){ if(state.currentPreview){ map.removeLayer(state.currentPreview); state.currentPreview = null; } }
+function addPreview(lat,lng,label='Ubicación'){ clearPreview(); state.currentPreview = L.circleMarker([lat,lng], {radius:10,color:'#38bdf8',weight:3,fillColor:'#38bdf8',fillOpacity:.25}).addTo(map).bindPopup(label).openPopup(); }
+function markerIcon(text, color, selected, overdueClass=''){
+  return L.divIcon({ className:'', iconSize:[36,36], iconAnchor:[18,18], html:`<div class="marker ${selected?'selected':''} ${overdueClass}" style="background:${esc(color)}">${text}</div>` });
+}
+function baseIcon(){ return L.divIcon({ className:'', iconSize:[34,34], iconAnchor:[17,17], html:'<div class="base-marker"><span>B</span></div>' }); }
+function arrowIcon(color){ return L.divIcon({ className:'', iconSize:[22,22], iconAnchor:[11,11], html:`<div class="arrow" style="color:${esc(color)}">➜</div>` }); }
+
+async function loadData(){
+  const data = await fetchJson(`/api/bootstrap?sort_by=${encodeURIComponent(state.sortBy)}&direction=${encodeURIComponent(state.sortDir)}`);
+  state.bases = data.bases;
+  state.stops = data.stops;
+  renderAll();
+}
+
+function groupStops(stops){
+  const groups = new Map();
+  for(const stop of stops){
+    const key = `${Number(stop.lat).toFixed(6)},${Number(stop.lng).toFixed(6)}`;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(stop);
+  }
+  return [...groups.values()];
+}
+
+function getVisibleStops(){ return state.stops.filter(s => state.filters[s.type] !== false); }
+function getActiveBase(){ return state.bases.find(b => b.is_active) || null; }
+
+function renderFilters(){
+  els.filters.innerHTML = '';
+  for(const [key, meta] of Object.entries(CATEGORY_META)){
+    const count = state.stops.filter(s => s.type === key).length;
+    const row = document.createElement('label');
+    row.className = 'filter-row';
+    row.innerHTML = `<span><input type="checkbox" data-filter="${key}" ${state.filters[key]?'checked':''}> <span class="dot" style="background:${meta.color}"></span> ${meta.label}</span><strong>${count}</strong>`;
+    els.filters.appendChild(row);
+  }
+}
+
+function renderBases(){
+  els.baseList.innerHTML = '';
+  if(!state.bases.length){ els.baseList.innerHTML = '<div class="item"><div class="sub">Aún no hay bases.</div></div>'; return; }
+  for(const base of state.bases){
+    const item = document.createElement('div'); item.className = 'item';
+    item.innerHTML = `<div class="item-head"><div><div class="title">${esc(base.name)}</div><div class="sub">${esc(base.direccion)}</div></div><div class="chips">${base.is_active?'<span class="badge">ACTIVA</span>':''}</div></div>
+      <div class="actions"><button data-base="view" data-id="${base.id}">Ver</button><button data-base="edit" data-id="${base.id}">Editar</button><button data-base="active" data-id="${base.id}">${base.is_active?'Quitar':'Usar'}</button><button data-base="delete" data-id="${base.id}" class="danger">Borrar</button></div>`;
+    els.baseList.appendChild(item);
+  }
+}
+
+function renderStopsList(){
+  const visible = getVisibleStops();
+  els.stopList.innerHTML = '';
+  els.statStops.textContent = state.stops.length;
+  els.statSelected.textContent = state.stops.filter(s => s.selected).length;
+  els.statOverdue.textContent = state.stops.filter(s => stopDueStatus(s).key === 'overdue').length;
+  if(!visible.length){ els.stopList.innerHTML = '<div class="item"><div class="sub">No hay paradas visibles.</div></div>'; return; }
+  for(const stop of visible){
+    const due = stopDueStatus(stop);
+    const meta = CATEGORY_META[stop.type];
+    const item = document.createElement('div'); item.className='item';
+    item.innerHTML = `<div class="item-head"><div><div class="title">${esc(stop.localidad || stop.po)}</div><div class="sub">PO# ${esc(stop.po)}</div></div>
+      <div class="chips"><span class="badge"><span class="dot" style="background:${esc(stop.color)}"></span>${esc(meta.label)}</span>${stop.selected?'<span class="badge">EN RUTA</span>':''}</div></div>
+      <div class="sub">${esc(stop.direccion)}</div>
+      <div class="sub">${esc(due.label)}${stop.due_date ? ` · ${esc(stop.due_date)}` : ''}</div>
+      ${stop.tag ? `<div class="sub">Tag: ${esc(stop.tag)}</div>` : ''}
+      ${stop.external_link ? `<a class="linkbtn" href="${esc(stop.external_link)}" target="_blank" rel="noopener">Abrir link</a>` : ''}
+      <div class="actions"><button data-stop="toggle" data-id="${stop.id}">${stop.selected?'Quitar':'Incluir'}</button><button data-stop="view" data-id="${stop.id}">Ver</button><button data-stop="edit" data-id="${stop.id}">Editar</button><button data-stop="delete" data-id="${stop.id}" class="danger">Borrar</button></div>`;
+    els.stopList.appendChild(item);
+  }
+}
+
+function renderMarkers(){
+  state.markers.clearLayers();
+  const bounds = [];
+  for(const base of state.bases){
+    const m = L.marker([base.lat, base.lng], {icon: baseIcon()}).addTo(state.markers);
+    m.bindPopup(`<strong>${esc(base.name)}</strong><br>${esc(base.direccion)}<br><button onclick="window.appActions.editBase(${base.id})" class="linkbtn" type="button">Editar base</button>`);
+    bounds.push([base.lat, base.lng]);
+  }
+  const visibleGroups = groupStops(getVisibleStops());
+  visibleGroups.forEach(group => {
+    const first = group[0];
+    const highest = group.map(stopDueStatus).sort((a,b)=>b.priority-a.priority)[0];
+    const selected = group.some(s => s.selected);
+    const overdueClass = highest.key === 'overdue' ? 'overdue' : (highest.key==='today'||highest.key==='tomorrow'||highest.key==='soon' ? 'due-soon' : '');
+    const label = group.length > 1 ? String(group.length) : (first.po || '').slice(0,2) || '1';
+    const icon = group.length > 1
+      ? L.divIcon({ className:'', iconSize:[40,34], iconAnchor:[20,17], html:`<div class="marker multi ${selected?'selected':''} ${overdueClass}" style="background:${esc(first.color)}">${group.length}</div>` })
+      : markerIcon(label, first.color, selected, overdueClass);
+    const m = L.marker([first.lat, first.lng], {icon}).addTo(state.markers);
+    const popupItems = group.map(stop => {
+      const due = stopDueStatus(stop);
+      const meta = CATEGORY_META[stop.type];
+      return `<div class="popup-card"><strong>PO# ${esc(stop.po)}</strong><br>${esc(stop.localidad)}<br>${esc(meta.label)} · ${esc(due.label)}
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="linkbtn" onclick="window.appActions.editStop(${stop.id})">Editar aquí</button>
+          <button type="button" class="linkbtn" onclick="window.appActions.toggleStop(${stop.id})">${stop.selected?'Quitar':'Incluir'} ruta</button>
+          ${stop.external_link ? `<a class="linkbtn" href="${esc(stop.external_link)}" target="_blank" rel="noopener">Abrir link</a>` : ''}
+        </div></div>`;
+    }).join('');
+    m.bindPopup(`<strong>${group.length>1 ? `${group.length} trabajos en este punto` : `PO# ${esc(first.po)}`}</strong><div class="popup-list">${popupItems}</div>`);
+    bounds.push([first.lat, first.lng]);
+  });
+  if(bounds.length && !state.route){ map.fitBounds(bounds, {padding:[40,40]}); }
+}
+
+function renderRoute(){
+  state.routeLayer.clearLayers();
+  if(!state.route){ els.routeOrder.textContent = 'Aún no se ha calculado ninguna ruta.'; els.statDistance.textContent = '0 km'; return; }
+  const lines = [];
+  state.route.segments.forEach((seg, idx) => {
+    const poly = L.polyline(seg.geometry, {color:seg.color, weight:5, opacity:.9}).addTo(state.routeLayer);
+    const arrow = L.marker(seg.arrow_at, {icon: arrowIcon(seg.color), interactive:false}).addTo(state.routeLayer);
+    lines.push(`${idx+1}. ${seg.from.name} → ${seg.to.name}`);
+  });
+  state.route.order_ids.forEach((id, idx) => {
+    const stop = state.stops.find(s => s.id === id);
+    if(stop){
+      L.marker([stop.lat, stop.lng], {icon:L.divIcon({className:'',iconSize:[22,22],iconAnchor:[11,11],html:`<div style="width:22px;height:22px;border-radius:50%;background:#fff;color:#111827;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;border:2px solid ${stop.color};">${idx+1}</div>`})}).addTo(state.routeLayer);
+    }
+  });
+  els.routeOrder.textContent = lines.join('\n');
+  els.statDistance.textContent = km(state.route.distance_m);
+  const segBounds = [];
+  state.route.segments.forEach(seg => seg.geometry.forEach(pt => segBounds.push(pt)));
+  if(segBounds.length) map.fitBounds(segBounds, {padding:[40,40]});
+}
+
+function renderAll(){ renderFilters(); renderBases(); renderStopsList(); renderMarkers(); renderRoute(); }
+
+async function locateAddress(inputEl, statusSetter, fillLocalidad){
+  const address = inputEl.value.trim();
+  if(!address){ statusSetter('Escribe la dirección primero.'); return; }
+  statusSetter('Buscando dirección...');
+  try{
+    const data = await fetchJson('/api/geocode', {method:'POST', body:JSON.stringify({address})});
+    const r = data.result; map.setView([r.lat, r.lng], 15); addPreview(r.lat, r.lng, r.display_name); if(fillLocalidad && !els.localidad.value.trim()){ els.localidad.value = [r.city, r.state].filter(Boolean).join(', ') || r.country || ''; }
+    statusSetter('Dirección encontrada.');
+  }catch(err){ statusSetter(err.message); }
+}
+
+function resetStopForm(){ els.stopId.value=''; els.po.value=''; els.localidad.value=''; els.direccion.value=''; els.externalLink.value=''; els.type.value='proyecto'; els.tag.value=''; els.color.value=CATEGORY_META.proyecto.color; els.dueDate.value=''; els.selected.checked=false; clearPreview(); setStopStatus('Formulario limpio.'); }
+function resetBaseForm(){ els.baseId.value=''; els.baseName.value=''; els.baseDireccion.value=''; clearPreview(); setBaseStatus('Formulario limpio.'); }
+function fillStopForm(stop){ els.stopId.value=stop.id; els.po.value=stop.po; els.localidad.value=stop.localidad; els.direccion.value=stop.direccion; els.externalLink.value=stop.external_link||''; els.type.value=stop.type; els.tag.value=stop.tag||''; els.color.value=stop.color||CATEGORY_META[stop.type].color; els.dueDate.value=stop.due_date||''; els.selected.checked=!!stop.selected; map.setView([stop.lat, stop.lng], 15); addPreview(stop.lat, stop.lng, stop.geocoded_address || stop.direccion); setStopStatus(`Editando PO# ${stop.po}`); }
+function fillBaseForm(base){ els.baseId.value=base.id; els.baseName.value=base.name; els.baseDireccion.value=base.direccion; map.setView([base.lat, base.lng], 15); addPreview(base.lat, base.lng, base.geocoded_address || base.direccion); setBaseStatus(`Editando base ${base.name}`); }
+
+async function saveStop(){
+  const payload = { po:els.po.value.trim(), localidad:els.localidad.value.trim(), direccion:els.direccion.value.trim(), external_link:els.externalLink.value.trim(), type:els.type.value, tag:els.tag.value.trim(), color:els.color.value, due_date:els.dueDate.value, selected:els.selected.checked };
+  try{
+    setStopStatus('Guardando parada...');
+    if(els.stopId.value) await fetchJson(`/api/stops/${els.stopId.value}`, {method:'PUT', body:JSON.stringify(payload)});
+    else await fetchJson('/api/stops', {method:'POST', body:JSON.stringify(payload)});
+    resetStopForm(); await loadData(); setStopStatus('Parada guardada.');
+  }catch(err){ setStopStatus(err.message); }
+}
+async function saveBase(){
+  const payload = { name:els.baseName.value.trim(), direccion:els.baseDireccion.value.trim() };
+  try{
+    setBaseStatus('Guardando base...');
+    if(els.baseId.value) await fetchJson(`/api/bases/${els.baseId.value}`, {method:'PUT', body:JSON.stringify(payload)});
+    else await fetchJson('/api/bases', {method:'POST', body:JSON.stringify(payload)});
+    resetBaseForm(); await loadData(); setBaseStatus('Base guardada.');
+  }catch(err){ setBaseStatus(err.message); }
+}
+async function toggleStop(id){
+  const stop = state.stops.find(s=>s.id===id); if(!stop) return;
+  await fetchJson(`/api/stops/${id}`, {method:'PATCH', body:JSON.stringify({selected:!stop.selected})});
+  await loadData();
+}
+async function deleteStop(id){ if(!confirm('¿Borrar esta parada?')) return; await fetchJson(`/api/stops/${id}`, {method:'DELETE'}); await loadData(); }
+async function deleteBase(id){ if(!confirm('¿Borrar esta base?')) return; await fetchJson(`/api/bases/${id}`, {method:'DELETE'}); await loadData(); }
+async function setActiveBase(id){ await fetchJson(`/api/bases/${id}/active`, {method:'POST'}); await loadData(); }
+async function bulkVisible(value){ const ids = getVisibleStops().map(s=>s.id); if(!ids.length) return; await fetchJson('/api/stops/bulk-selection', {method:'POST', body:JSON.stringify({ids, selected:value})}); await loadData(); }
+async function calcRoute(){
+  const ids = getVisibleStops().filter(s=>s.selected).map(s=>s.id);
+  const base = getActiveBase();
+  if(!ids.length){ setRouteStatus('No hay paradas seleccionadas.'); return; }
+  try{
+    setRouteStatus('Calculando ruta...');
+    const data = await fetchJson('/api/route', {method:'POST', body:JSON.stringify({selected_ids:ids, base_id:base ? base.id : null})});
+    state.route = data.route; renderRoute(); setRouteStatus('Ruta calculada.');
+  }catch(err){ setRouteStatus(err.message); }
+}
+function clearRoute(){ state.route = null; renderRoute(); setRouteStatus('Ruta eliminada.'); }
+
+window.appActions = {
+  editStop(id){ const stop = state.stops.find(s=>s.id===id); if(stop) fillStopForm(stop); },
+  editBase(id){ const base = state.bases.find(b=>b.id===id); if(base) fillBaseForm(base); },
+  toggleStop(id){ toggleStop(id); }
+};
+
+els.type.addEventListener('change', ()=>{ if(!els.stopId.value) els.color.value = CATEGORY_META[els.type.value].color; });
+els.btnLocateStop.addEventListener('click', ()=> locateAddress(els.direccion, setStopStatus, true));
+els.btnLocateBase.addEventListener('click', ()=> locateAddress(els.baseDireccion, setBaseStatus, false));
+els.btnSaveStop.addEventListener('click', saveStop); els.btnSaveBase.addEventListener('click', saveBase);
+els.btnClearStop.addEventListener('click', resetStopForm); els.btnClearBase.addEventListener('click', resetBaseForm);
+els.btnApplySort.addEventListener('click', async ()=>{ state.sortBy = els.sortBy.value; state.sortDir = els.sortDir.value; await loadData(); });
+els.btnRefresh.addEventListener('click', loadData); els.btnCalcRoute.addEventListener('click', calcRoute); els.btnClearRoute.addEventListener('click', clearRoute);
+els.btnSelectVisible.addEventListener('click', ()=>bulkVisible(true)); els.btnUnselectVisible.addEventListener('click', ()=>bulkVisible(false));
+els.filters.addEventListener('change', e=>{ const cb = e.target.closest('input[data-filter]'); if(!cb) return; state.filters[cb.dataset.filter] = cb.checked; renderAll(); });
+els.stopList.addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-stop]'); if(!btn) return;
+  const id = Number(btn.dataset.id);
+  if(btn.dataset.stop==='toggle') toggleStop(id);
+  if(btn.dataset.stop==='view'){ const stop = state.stops.find(s=>s.id===id); if(stop) map.setView([stop.lat, stop.lng], 15); }
+  if(btn.dataset.stop==='edit'){ const stop = state.stops.find(s=>s.id===id); if(stop) fillStopForm(stop); }
+  if(btn.dataset.stop==='delete') deleteStop(id);
+});
+els.baseList.addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-base]'); if(!btn) return;
+  const id = Number(btn.dataset.id);
+  if(btn.dataset.base==='view'){ const base = state.bases.find(b=>b.id===id); if(base) map.setView([base.lat, base.lng], 15); }
+  if(btn.dataset.base==='edit'){ const base = state.bases.find(b=>b.id===id); if(base) fillBaseForm(base); }
+  if(btn.dataset.base==='active') setActiveBase(id);
+  if(btn.dataset.base==='delete') deleteBase(id);
+});
+map.on('click', ()=> clearPreview());
+loadData();
+setInterval(loadData, 20000);
+</script>
+</body>
+</html>

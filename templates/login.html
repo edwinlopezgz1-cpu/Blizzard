@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title }} · Acceso</title>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#020617;color:#e5e7eb;display:grid;place-items:center;min-height:100vh}
+    .card{width:min(420px,92vw);background:#0f172a;border:1px solid #334155;border-radius:18px;padding:24px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 8px;font-size:26px}.muted{color:#94a3b8;font-size:14px;line-height:1.5;margin-bottom:16px}
+    label{display:block;font-size:13px;color:#cbd5e1;margin:12px 0 6px}
+    input{width:100%;padding:12px;border-radius:12px;border:1px solid #475569;background:#020617;color:#fff;box-sizing:border-box}
+    button{margin-top:16px;width:100%;padding:12px;border:0;border-radius:12px;background:#22c55e;color:#052e16;font-weight:700;cursor:pointer}
+    .error{margin-top:12px;background:#450a0a;border:1px solid #7f1d1d;color:#fecaca;padding:10px;border-radius:12px}
+  </style>
+</head>
+<body>
+  <form class="card" method="post">
+    <h1>{{ title }}</h1>
+    <div class="muted">Acceso compartido del equipo.</div>
+    <label>Tu nombre</label>
+    <input name="user_name" required placeholder="Ejemplo: Jair">
+    <label>Contraseña del equipo</label>
+    <input name="password" type="password" required placeholder="Contraseña">
+    <button type="submit">Entrar</button>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  </form>
+</body>
+</html>
